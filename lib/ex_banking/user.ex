@@ -51,6 +51,21 @@ defmodule ExBanking.User do
     end
   end
 
+  def get_balance(user, currency) do
+    with pid when is_pid(pid) <- user_exists?(user) do
+      {:message_queue_len, mailbox_len} = Process.info(pid, :message_queue_len)
+
+      if mailbox_len <= 10 do
+        GenServer.call(pid, {:balance, currency})
+      else
+        {:error, :too_many_requests_to_user}
+      end
+    else
+      nil ->
+        {:error, :user_does_not_exist}
+    end
+  end
+
   def user_exists?(user) do
     user
     |> user_pid()
@@ -80,5 +95,11 @@ defmodule ExBanking.User do
       new_balance = Decimal.sub(balance, amount)
       {:reply, {:ok, Decimal.to_float(new_balance)}, Map.put(balances, currency, new_balance)}
     end
+  end
+
+  @impl GenServer
+  def handle_call({:balance, currency}, _from, balances) do
+    balance = Map.get(balances, currency, Decimal.new(0))
+    {:reply, {:ok, Decimal.to_float(balance)}, balances}
   end
 end

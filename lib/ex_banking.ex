@@ -54,6 +54,22 @@ defmodule ExBanking do
     end
   end
 
+  @spec get_balance(user :: String.t(), currency :: String.t()) ::
+          {:ok, balance :: number}
+          | {:error, :wrong_arguments | :user_does_not_exist | :too_many_requests_to_user}
+  def get_balance(user, currency) do
+    with true <- valid_name?(user),
+         true <- valid_currency?(currency) do
+      User.get_balance(user, currency)
+    else
+      false ->
+        {:error, :wrong_arguments}
+
+      error ->
+        error
+    end
+  end
+
   def valid_name?(user) do
     String.trim(user) != ""
   end

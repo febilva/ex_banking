@@ -63,7 +63,7 @@ defmodule ExBankingTest do
     end
 
     test "shouldnt allow the deposit if the user doesnt exists" do
-      assert ExBanking.withdraw("user", 200.00, "USD") == {:error, :user_does_not_exist}
+      assert ExBanking.withdraw(@user, 200.00, "USD") == {:error, :user_does_not_exist}
     end
 
     test "shouldnt allow the user to withdraw if the user doesnt have enough balance" do
@@ -75,6 +75,33 @@ defmodule ExBankingTest do
     test "shouldnt allow more than 10 requests at same time" do
       :ok = ExBanking.create_user(@user)
       pids = for _ <- 1..200, do: Task.async(fn -> ExBanking.withdraw(@user, 200.00, "USD") end)
+
+      assert {:error, :too_many_requests_to_user} in Task.await_many(pids)
+    end
+  end
+
+  describe "get_balance/2" do
+    test "will return the balance of the user" do
+      :ok = ExBanking.create_user(@user)
+      ExBanking.deposit(@user, 100, "USD")
+
+      assert ExBanking.get_balance(@user, "USD") == {:ok, 100.0}
+    end
+
+    test "should not show balance with invalid user or currency" do
+      :ok = ExBanking.create_user(@user)
+      assert ExBanking.get_balance("", "USD") == {:error, :wrong_arguments}
+      assert ExBanking.get_balance(@user, "") == {:error, :wrong_arguments}
+    end
+
+    test "shouldn't return the balance is the user doesn't exist" do
+      assert ExBanking.get_balance(@user, "USD") == {:error, :user_does_not_exist}
+    end
+
+    test "shouldnt allow more than 10 requests at same time" do
+      :ok = ExBanking.create_user(@user)
+
+      pids = for _ <- 1..200, do: Task.async(fn -> ExBanking.get_balance(@user, "USD") end)
 
       assert {:error, :too_many_requests_to_user} in Task.await_many(pids)
     end
