@@ -33,6 +33,27 @@ defmodule ExBanking do
     end
   end
 
+  @spec withdraw(user :: String.t(), amount :: number, currency :: String.t()) ::
+          {:ok, new_balance :: number}
+          | {:error,
+             :wrong_arguments
+             | :user_does_not_exist
+             | :not_enough_money
+             | :too_many_requests_to_user}
+  def withdraw(user, amount, currency) do
+    with true <- valid_name?(user),
+         true <- valid_amount?(amount, 2),
+         true <- valid_currency?(currency) do
+      User.withdraw(user, amount, currency)
+    else
+      false ->
+        {:error, :wrong_arguments}
+
+      error ->
+        error
+    end
+  end
+
   def valid_name?(user) do
     String.trim(user) != ""
   end

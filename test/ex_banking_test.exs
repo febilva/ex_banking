@@ -29,8 +29,6 @@ defmodule ExBankingTest do
     end
 
     test "should not deposit with invalid values" do
-      :ok = ExBanking.create_user(@user)
-
       assert ExBanking.deposit("", 200.00, "USD") == {:error, :wrong_arguments}
       assert ExBanking.deposit(@user, 200.001, "USD") == {:error, :wrong_arguments}
       assert ExBanking.deposit(@user, 200.00, "") == {:error, :wrong_arguments}
@@ -44,6 +42,39 @@ defmodule ExBankingTest do
     test "shouldnt allow more than 10 requests at same time" do
       :ok = ExBanking.create_user(@user)
       pids = for _ <- 1..200, do: Task.async(fn -> ExBanking.deposit(@user, 200.00, "USD") end)
+
+      assert {:error, :too_many_requests_to_user} in Task.await_many(pids)
+    end
+  end
+
+  describe "withdraw/3" do
+    @user "febil"
+    test "will reduce the given amont from the user" do
+      :ok = ExBanking.create_user(@user)
+      ExBanking.deposit(@user, 100, "USD")
+      assert ExBanking.withdraw(@user, 100, "USD") == {:ok, 0.0}
+    end
+
+    test "should not withdraw with invalid values" do
+      assert ExBanking.withdraw("", 200.00, "USD") == {:error, :wrong_arguments}
+      assert ExBanking.withdraw(@user, 200.001, "USD") == {:error, :wrong_arguments}
+      assert ExBanking.withdraw(@user, 200.00, "") == {:error, :wrong_arguments}
+      assert ExBanking.withdraw(@user, 200.00, "    ") == {:error, :wrong_arguments}
+    end
+
+    test "shouldnt allow the deposit if the user doesnt exists" do
+      assert ExBanking.withdraw("user", 200.00, "USD") == {:error, :user_does_not_exist}
+    end
+
+    test "shouldnt allow the user to withdraw if the user doesnt have enough balance" do
+      :ok = ExBanking.create_user(@user)
+
+      assert ExBanking.withdraw(@user, 200.00, "USD") == {:error, :not_enough_money}
+    end
+
+    test "shouldnt allow more than 10 requests at same time" do
+      :ok = ExBanking.create_user(@user)
+      pids = for _ <- 1..200, do: Task.async(fn -> ExBanking.withdraw(@user, 200.00, "USD") end)
 
       assert {:error, :too_many_requests_to_user} in Task.await_many(pids)
     end
