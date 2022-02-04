@@ -70,6 +70,56 @@ defmodule ExBanking do
     end
   end
 
+  @spec send(
+          from_user :: String.t(),
+          to_user :: String.t(),
+          amount :: number,
+          currency :: String.t()
+        ) ::
+          {:ok, from_user_balance :: number, to_user_balance :: number}
+          | {:error,
+             :wrong_arguments
+             | :not_enough_money
+             | :sender_does_not_exist
+             | :receiver_does_not_exist
+             | :too_many_requests_to_sender
+             | :too_many_requests_to_receiver}
+  def send(from_user, to_user, amount, currency) do
+    with true <- valid_name?(from_user),
+         true <- valid_name?(to_user),
+         true <- valid_amount?(amount, 2),
+         true <- valid_currency?(currency),
+         {:from_user, {:ok, from_user_balance}} <-
+           {:from_user, User.withdraw(from_user, amount, currency)},
+         {:to_user, {:ok, to_user_balance}} <- {:to_user, User.deposit(to_user, amount, currency)} do
+      {:ok, from_user_balance, to_user_balance}
+    else
+      false ->
+        {:error, :wrong_arguments}
+
+      {:from_user, {:error, :user_does_not_exist}} ->
+        {:error, :sender_does_not_exist}
+
+      {:to_user, {:error, :user_does_not_exist}} ->
+        {:error, :receiver_does_not_exist}
+
+      {:from_user, {:error, :too_many_requests_to_user}} ->
+        {:error, :too_many_requests_to_receiver}
+
+      {:to_user, {:error, :too_many_requests_to_user}} ->
+        {:error, :too_many_requests_to_sender}
+
+      {:from_user, error} ->
+        error
+
+      {:to_user, error} ->
+        error
+
+      error ->
+        error
+    end
+  end
+
   def valid_name?(user) do
     String.trim(user) != ""
   end
