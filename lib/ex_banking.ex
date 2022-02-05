@@ -89,30 +89,31 @@ defmodule ExBanking do
          true <- valid_name?(to_user),
          true <- valid_amount?(amount, 2),
          true <- valid_currency?(currency),
-         {:from_user, {:ok, from_user_balance}} <-
-           {:from_user, User.withdraw(from_user, amount, currency)},
-         {:to_user, {:ok, to_user_balance}} <- {:to_user, User.deposit(to_user, amount, currency)} do
+         {:sender, {:ok, from_user_balance}} <-
+           {:sender, User.withdraw(from_user, amount, currency)},
+         {:receiver, {:ok, to_user_balance}} <-
+           {:receiver, User.deposit(to_user, amount, currency)} do
       {:ok, from_user_balance, to_user_balance}
     else
       false ->
         {:error, :wrong_arguments}
 
-      {:from_user, {:error, :user_does_not_exist}} ->
+      {:sender, {:error, :user_does_not_exist}} ->
         {:error, :sender_does_not_exist}
 
-      {:to_user, {:error, :user_does_not_exist}} ->
+      {:receiver, {:error, :user_does_not_exist}} ->
         {:error, :receiver_does_not_exist}
 
-      {:from_user, {:error, :too_many_requests_to_user}} ->
-        {:error, :too_many_requests_to_receiver}
-
-      {:to_user, {:error, :too_many_requests_to_user}} ->
+      {:sender, {:error, :too_many_requests_to_user}} ->
         {:error, :too_many_requests_to_sender}
 
-      {:from_user, error} ->
+      {:receiver, {:error, :too_many_requests_to_user}} ->
+        {:error, :too_many_requests_to_receiver}
+
+      {:sender, error} ->
         error
 
-      {:to_user, error} ->
+      {:receiver, error} ->
         error
 
       error ->
