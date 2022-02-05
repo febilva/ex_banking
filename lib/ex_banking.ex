@@ -115,9 +115,6 @@ defmodule ExBanking do
 
       {:receiver, error} ->
         error
-
-      error ->
-        error
     end
   end
 
